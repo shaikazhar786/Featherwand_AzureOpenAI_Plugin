@@ -1,0 +1,112 @@
+step 1 - update the pom.xml file (added the Azure AI OpenAI dependency and the necessary Azure Core libraries.)
+
+step 2 - need to modify the Service layer (for logic) and the GUI layer (for the user interface).
+
+Since Feather Wand uses a "Provider" pattern, you'll need to create a new client class and register it in the main service factory.
+
+Create a new file AzureOpenAiService.java inside the package org.qainsights.jmeter.ai.service. This class uses the Azure SDK dependencies we added to your pom.xml.
+
+step 3 - Update the GUI Factory
+
+To integrate Azure OpenAI into AiChatPanel.java, we need to update the imports, initialize the new AzureOpenAiService (which you created in the previous step),
+
+update the model loading logic, and modify the message routing to handle the azure: prefix
+
+=============
+added  // Add to imports section
+import org.qainsights.jmeter.ai.service.AzureOpenAiService;
+
+// Add to class fields (around line 70)
+private AzureOpenAiService azureOpenAiService;
+
+
+Update the constructor to instantiate the Azure service.
+
+azureOpenAiService = new AzureOpenAiService();
+=================================
+
+// Add Azure OpenAI (Deployment-based)
+
+try {
+        String azureDeployment = org.apache.jmeter.util.JMeterUtils.getPropDefault("jmeter.ai.azure.deployment", "Azure-Model");
+        allModels.add("azure:" + azureDeployment);
+        log.info("Added Azure OpenAI deployment to selector");
+    } catch (Exception e) {
+        log.error("Error adding Azure model: {}", e.getMessage());
+    }
+
+===================================
+// Update getAiResponse
+
+private String getAiResponse(String message) {
+    log.info("Getting AI response for message: {}", message);
+
+    String selectedModel = (String) modelSelector.getSelectedItem();
+    if (selectedModel == null) {
+        return claudeService.generateResponse(new ArrayList<>(conversationHistory));
+    }
+
+    if (selectedModel.startsWith("azure:")) {
+        log.info("Using Azure OpenAI service");
+        // The Azure service handles deployment name internally via properties
+        return azureOpenAiService.getResponse(message); 
+    } else if (selectedModel.startsWith("openai:")) {
+        String openAiModelId = selectedModel.substring(7);
+        openAiService.setModel(openAiModelId);
+        return openAiService.generateResponse(new ArrayList<>(conversationHistory));
+    } else if (selectedModel.startsWith("ollama:")) {
+        String ollamaModelId = selectedModel.substring(7);
+        ollamaService.setModel(ollamaModelId);
+        return ollamaService.generateResponse(new ArrayList<>(conversationHistory));
+    } else {
+        claudeService.setModel(selectedModel);
+        return claudeService.generateResponse(new ArrayList<>(conversationHistory));
+    }
+}	
+	
+========================================
+// Update @optimize Handler
+
+if (selectedModel.startsWith("openai:")) {
+                    // Use OpenAI service
+                    serviceToUse = openAiService;
+                    log.info("Using OpenAI service for optimization");
+                } else if (selectedModel.startsWith("azure:")) {
+                    serviceToUse = azureOpenAiService; // Route to Azure
+                    log.info("Using Azure service for optimization");
+                }    else {
+                    // Use Claude service
+                    serviceToUse = claudeService;
+                    log.info("Using Claude service for optimization");
+                }
+				
+================================================				
+// Update @lint
+
+AiService serviceToUse;
+if (selectedModel.startsWith("openai:")) {
+    serviceToUse = openAiService;
+} else if (selectedModel.startsWith("azure:")) {
+    serviceToUse = azureOpenAiService; // Route to Azure
+} else {
+    serviceToUse = claudeService;
+}
+
+==================================================
+// Update @usage Handler
+
+if (selectedModel != null) {
+    if (selectedModel.startsWith("openai:")) {
+        serviceToUse = openAiService;
+    } else if (selectedModel.startsWith("azure:")) {
+        serviceToUse = azureOpenAiService;
+    } else if (selectedModel.startsWith("claude")) {
+        serviceToUse = claudeService;
+    }
+}
+
+==============================================
+/// Check your AzureOpenAiService.java file and ensure the class signature looks like this
+
+public class AzureOpenAiService implements AiService
+

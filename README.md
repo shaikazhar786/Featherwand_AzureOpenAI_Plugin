@@ -70,9 +70,9 @@ Open it with a text editor and add the following lines at the bottom:
 
 
 # Enable OpenAI/Azure Provider
-openai.api.key=YOUR_AZURE_API_KEY
-openai.api.base=https://YOUR_RESOURCE_NAME.openai.azure.com/
-openai.default.model=YOUR_DEPLOYMENT_NAME
+jmeter.ai.azure.endpoint=https://YOUR_RESOURCE_NAME.openai.azure.com/
+jmeter.ai.azure.api.key=YOUR_API_KEY
+jmeter.ai.azure.deployment=YOUR_DEPLOYMENT_NAME(gpt-5 or gpt-5-nano)
 
 # Optional: Set the API version if required by your region
 # openai.api.version=2024-02-15-preview
